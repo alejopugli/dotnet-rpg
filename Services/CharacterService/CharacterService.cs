@@ -42,7 +42,7 @@ namespace dotnet_rpg.Services.CharacterService
             ServiceResponse<GetCharacterDto> response = new ServiceResponse<GetCharacterDto>();
             try
             {
-                response.Data = _mapper.Map<GetCharacterDto>(_context.Characters.FirstAsync(c => c.Id == id));
+                response.Data = _mapper.Map<GetCharacterDto>( await _context.Characters.FirstAsync(c => c.Id == id));
             }
             catch (Exception e)
             {
@@ -59,7 +59,6 @@ namespace dotnet_rpg.Services.CharacterService
             var character = _mapper.Map<Character>(newCharacter);
             try
             {
-                character.Id = _context.Characters.Max(c => c.Id) + 1;
                 _context.Characters.Add(character);
                 await _context.SaveChangesAsync();
                 response.Data = await _context.Characters
