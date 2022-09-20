@@ -19,14 +19,21 @@ namespace dotnet_rpg.Services.AuthRepository
             this._configuration = configuration;
             this._context = context;
         }
-        public async Task<ServiceResponse<string>> Login(string username, string password)
+         public async Task<ServiceResponse<string>> Login(string username, string password)
         {
             var response = new ServiceResponse<string>();
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username.ToLower().Equals(username.ToLower()));
-            if (user == null || VerifyPasswordHash(password, user.PasswordHash, user.PasswordSalt))
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Username.ToLower().Equals(username.ToLower()));
+
+            if (user == null)
             {
                 response.Success = false;
-                response.Message = "Wrong Credentials.";
+                response.Message = "User not found.";
+            }
+            else if (!VerifyPasswordHash(password, user.PasswordHash, user.PasswordSalt))
+            {
+                response.Success = false;
+                response.Message = "Wrong password.";
             }
             else
             {
@@ -84,11 +91,12 @@ namespace dotnet_rpg.Services.AuthRepository
         private string CreateToken(User user)
         {
             List<Claim> claims = new List<Claim> {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Name, user.Username)
             };
 
             SymmetricSecurityKey key = new SymmetricSecurityKey(System.Text.Encoding.UTF8
-                .GetBytes(_configuration.GetSection("AppSeting:Token").Value));
+                .GetBytes(_configuration.GetSection("AppSettings:Token").Value));
 
             SigningCredentials creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
 
@@ -100,11 +108,9 @@ namespace dotnet_rpg.Services.AuthRepository
             };
 
             JwtSecurityTokenHandler tokenHandler = new JwtSecurityTokenHandler();
-
             SecurityToken token = tokenHandler.CreateToken(tokenDescriptor);
 
             return tokenHandler.WriteToken(token);
-
         }
     }
 }
